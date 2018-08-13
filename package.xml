@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>ros_custom_estimator</name>
+  <version>0.0.0</version>
+  <description>This package...</description>
+
+  <maintainer email="m.efetiryaki@gmail.com">Mehmet Efe Tiryaki</maintainer>
+  <license>Proprietary</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>ros_node_utils</depend>
+  <depend>roscpp</depend>
+  <depend>std_msgs</depend>
+  <depend>message_generation</depend>
+  <depend>ros_custom_controller_base</depend>
+
+</package>
