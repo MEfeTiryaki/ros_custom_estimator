@@ -2,88 +2,70 @@
 
 #include "ros_custom_estimator/EstimatorBase.hpp"
 #include "ros_custom_estimator/SensorHandler/SensorHandlerBase.hpp"
-#include "ros_custom_controller_base/State.h"
-#include "ros_custom_controller_base/Input.h"
 #include <ctime>
 
 namespace estimator {
 class KalmanFilterBase : public EstimatorBase
 {
  public:
-  KalmanFilterBase():
-    EstimatorBase(),
-    statePublisherQueueSize_(0),
-    publishTime_(true)
+  KalmanFilterBase(std::string nodeName)
+      : EstimatorBase(nodeName),
+        statePublisherQueueSize_(0),
+        publishTime_(true),
+        m_(0),
+        n_(0),
+        initializerSubscriberQueueSize_(1)
   {
     time_start_ = clock();
     time_start_ros_ = ros::Time::now().toSec();
-  };
+  }
+  ;
 
   //~KalmanFilterBase();
 
-  virtual void readParameters() override{
+  virtual void readParameters() override
+  {
+
     for (auto s : sensors_) {
       s->readParameters();
-      if (nodeHandle_->hasParam(
-          ns_ + "/estimator/subscribers/sensorSubscriber_" + std::to_string(s->getId()) + "/topic")) {
-        std::string name;
-        nodeHandle_->getParam(
-            ns_ + "/estimator/subscribers/sensorSubscriber_" + std::to_string(s->getId()) + "/topic",
-            name);
-        s->setSubscriberName(name);
-      }
+      std::string name;
+      paramRead(
+          this->nodeHandle_,
+          this->namespace_ + "/estimator/subscribers/sensorSubscriber_" + std::to_string(s->getId())
+              + "/topic",
+          name);
+      s->setSubscriberName(name);
     }
     // SUBSCRIBERS
-    if (nodeHandle_->hasParam(ns_ + "/estimator/subscribers/inputSubscriber/topic")) {
-      nodeHandle_->getParam(ns_ + "/estimator/subscribers/inputSubscriber/topic",
-                            inputSubscriberName_);
-    }
+    paramRead(this->nodeHandle_, this->namespace_ + "/estimator/subscribers/inputSubscriber/topic",
+              inputSubscriberName_);
 
-    if (nodeHandle_->hasParam(ns_ + "/estimator/subscribers/initilizerSubscriber/topic")) {
-      nodeHandle_->getParam(ns_ + "/estimator/subscribers/initilizerSubscriber/topic",
-                            initilizerSubscriberName_);
-    }
-    if (nodeHandle_->hasParam(ns_ + "/estimator/subscribers/initilizerSubscriber/queue_size")) {
-      nodeHandle_->getParam(ns_ + "/estimator/subscribers/initilizerSubscriber/queue_size",
-                            initilizerSubscriberName_);
-    }
+    paramRead(this->nodeHandle_,
+              this->namespace_ + "/estimator/subscribers/initializerSubscriber/topic",
+              initializerSubscriberName_);
 
+    paramRead(this->nodeHandle_,
+              this->namespace_ + "/estimator/subscribers/initializerSubscriber/queue_size",
+              initializerSubscriberName_);
     // PUBLISHERS
-    if (nodeHandle_->hasParam(ns_ + "/estimator/publishers/estimator/topic")) {
-      nodeHandle_->getParam(ns_ + "/estimator/publishers/estimator/topic", statePublisherName_);
-    }
-    if (nodeHandle_->hasParam(ns_ + "/estimator/publishers/estimator/queue_size")) {
-      nodeHandle_->getParam(ns_ + "/estimator/publishers/estimator/queue_size",
-                            statePublisherQueueSize_);
-    }
+    paramRead(this->nodeHandle_, this->namespace_ + "/estimator/publishers/estimator/topic",
+              statePublisherName_);
+    paramRead(this->nodeHandle_, this->namespace_ + "/estimator/publishers/estimator/queue_size",
+              statePublisherQueueSize_);
+
     // PARAMETERS
     // X_O
-    double* ptr;
-    if (nodeHandle_->hasParam(ns_ + "/estimator/estimatorParameters/X")) {
-      std::vector<double> value;
-      nodeHandle_->getParam(ns_ + "/estimator/estimatorParameters/X", value);
-      ptr = &value[0];
-      x_0_ << Eigen::Map<Eigen::VectorXd>(ptr, n_);
-      x_m_ << Eigen::Map<Eigen::VectorXd>(ptr, n_);
-    }
-
+    paramRead(this->nodeHandle_, this->namespace_ + "/estimator/estimatorParameters/X", x_0_);
+    x_m_ = x_0_;
     // P
-    if (nodeHandle_->hasParam(ns_ + "/estimator/estimatorParameters/P")) {
-      std::vector<double> value;
-      nodeHandle_->getParam(ns_ + "/estimator/estimatorParameters/P", value);
-      ptr = &value[0];
-      P_init_.diagonal() << Eigen::Map<Eigen::VectorXd>(ptr, n_);
-      P_m_.diagonal() << Eigen::Map<Eigen::VectorXd>(ptr, n_);
-    }
-    if (nodeHandle_->hasParam(ns_ + "/estimator/estimatorParameters/Q")) {
-      std::vector<double> value;
-      nodeHandle_->getParam(ns_ + "/estimator/estimatorParameters/Q", value);
-      ptr = &value[0];
-      Q_.diagonal() << Eigen::Map<Eigen::VectorXd>(ptr, n_);
+    paramRead(this->nodeHandle_, this->namespace_ + "/estimator/estimatorParameters/P", P_init_);
+    P_m_ = P_init_ ;
+    // Q
+    paramRead(this->nodeHandle_, this->namespace_ + "/estimator/estimatorParameters/Q", Q_);
 
-    }
     EstimatorBase::readParameters();
-  };
+  }
+  ;
 
   virtual void create() override
   {
@@ -100,48 +82,52 @@ class KalmanFilterBase : public EstimatorBase
     for (auto& s : sensors_) {
       s->create();
     }
-    state_ = ros_custom_controller_base::State();
+    state_ = std_msgs::Float64MultiArray();
     publisherTimer_ = nodeHandle_->createTimer(ros::Duration(0.02),
                                                &KalmanFilterBase::publisherTimerCallback, this);
-  };
+  }
+  ;
 
-  virtual void initilize() override
+  virtual void initialize() override
   {
     x_p_ = Eigen::VectorXd::Zero(n_);
     P_p_ = Eigen::MatrixXd::Zero(n_, n_);
     u_ = Eigen::VectorXd::Zero(m_);
     z_ = Eigen::VectorXd();
     for (auto& s : sensors_) {
-      s->initilize(nodeHandle_);
+      s->initialize();
     }
-    EstimatorBase::initilize();
-  };
+    EstimatorBase::initialize();
+  }
+  ;
 
-  virtual void initilizeSubscribers() override
+  virtual void initializeSubscribers() override
   {
     for (auto& s : sensors_) {
-      s->initilizeSubscribers();
+      s->initializeSubscribers();
     }
-    inputSubcriber_ = nodeHandle_->subscribe(ns_ + "/" + inputSubscriberName_, 10,
+    inputSubcriber_ = nodeHandle_->subscribe(this->namespace_ + "/" + inputSubscriberName_, 10,
                                              &KalmanFilterBase::inputSubscriberCallback, this);
 
-    initilizerSubcriber_ = nodeHandle_->subscribe(ns_ + "/" + initilizerSubscriberName_,
-                                                  initilizerSubscriberQueueSize_,
-                                                  &KalmanFilterBase::initilizerSubscriberCallback,
+    initializerSubcriber_ = nodeHandle_->subscribe(this->namespace_ + "/" + initializerSubscriberName_,
+                                                  initializerSubscriberQueueSize_,
+                                                  &KalmanFilterBase::initializerSubscriberCallback,
                                                   this);
 
-    EstimatorBase::initilizeSubscribers();
+    EstimatorBase::initializeSubscribers();
 
-  };
+  }
+  ;
 
-  virtual void initilizePublishers() override
+  virtual void initializePublishers() override
   {
     for (auto& s : sensors_) {
-      s->initilizePublishers();
+      s->initializePublishers();
     }
-    statePublisher_ = nodeHandle_->advertise<ros_custom_controller_base::State>(
-        ns_ + "/" + statePublisherName_, statePublisherQueueSize_);
-  };
+    statePublisher_ = nodeHandle_->advertise<std_msgs::Float64MultiArray>(
+        this->namespace_ + "/" + statePublisherName_, statePublisherQueueSize_);
+  }
+  ;
 
   virtual void advance(double dt) override
   {
@@ -167,7 +153,8 @@ class KalmanFilterBase : public EstimatorBase
 
     time_start_ = clock();
     time_start_ros_ = ros::Time::now().toSec();
-  };
+  }
+  ;
 
   virtual void addSensors()
   {
@@ -197,50 +184,52 @@ class KalmanFilterBase : public EstimatorBase
         z_.segment(size_z, dummy.size()) = dummy;
       }
     }
-  };
+  }
+  ;
 
   virtual void publish()
   {
-    state_.header.stamp = ros::Time::now();
-    state_.state.clear();
+    state_.data.clear();
     for (int i = 0; i < x_m_.size(); i++) {
-      state_.state.push_back(x_m_(i));
+      state_.data.push_back(x_m_(i));
     }
     statePublisher_.publish(state_);
-  };
+  }
+  ;
 
-  virtual void inputSubscriberCallback(ros_custom_controller_base::Input msg)
+  virtual void inputSubscriberCallback(std_msgs::Float64MultiArray msg)
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    for (int i = 0; i < msg.input.size(); i++) {
-      u_[i] = msg.input[i];
+    for (int i = 0; i < msg.data.size(); i++) {
+      u_[i] = msg.data[i];
     }
-  };
+  }
+  ;
 
-  virtual void initilizerSubscriberCallback(ros_custom_controller_base::State msg)
+  virtual void initializerSubscriberCallback(std_msgs::Float64MultiArray msg)
   {
     std::lock_guard<std::mutex> lock(mutex_);
     //std::cerr << this->ns_ << " init subscriber!!" << std::endl;
-    for (int i = 0; i < msg.state.size(); i++) {
-      x_m_[i] = msg.state[i];
+    for (int i = 0; i < msg.data.size(); i++) {
+      x_m_[i] = msg.data[i];
     }
     //std::cerr<< x_m_.transpose() << std::endl;
-  };
-
+  }
+  ;
 
   void publisherTimerCallback(const ros::TimerEvent& event)
   {
     std::lock_guard<std::mutex> lock(mutex_);
     publishTime_ = true;
-  };
+  }
+  ;
 
  protected:
   int n_;
   int m_;
 
-
   std::vector<sensor::SensorHandlerBase*> sensors_;
-  ros_custom_controller_base::State state_;
+  std_msgs::Float64MultiArray state_;
 
   ros::Publisher statePublisher_;
   std::string statePublisherName_;
@@ -249,9 +238,9 @@ class KalmanFilterBase : public EstimatorBase
   ros::Subscriber inputSubcriber_;
   std::string inputSubscriberName_;
 
-  ros::Subscriber initilizerSubcriber_;
-  std::string initilizerSubscriberName_;
-  int initilizerSubscriberQueueSize_;
+  ros::Subscriber initializerSubcriber_;
+  std::string initializerSubscriberName_;
+  int initializerSubscriberQueueSize_;
 
   Eigen::VectorXd x_p_;
   Eigen::VectorXd x_m_;

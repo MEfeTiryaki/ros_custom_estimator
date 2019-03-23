@@ -8,8 +8,8 @@ find_package(catkin REQUIRED
     message_generation
     std_msgs
     ros_node_utils
+    ros_custom_controller
     roscpp
-    ros_custom_controller_base
 )
 find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED)
@@ -23,9 +23,10 @@ catkin_package(
 	CATKIN_DEPENDS
 	  roscpp
 	  ros_node_utils
+	  ros_custom_controller
 	  message_generation
 	  std_msgs
-    ros_custom_controller_base
+    
 )
 
 include_directories(

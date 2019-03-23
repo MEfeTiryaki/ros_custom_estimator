@@ -9,9 +9,9 @@
 
   <buildtool_depend>catkin</buildtool_depend>
   <depend>ros_node_utils</depend>
+  <depend>ros_custom_controller</depend>
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
   <depend>message_generation</depend>
-  <depend>ros_custom_controller_base</depend>
 
 </package>

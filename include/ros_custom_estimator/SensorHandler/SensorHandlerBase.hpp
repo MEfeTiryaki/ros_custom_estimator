@@ -7,19 +7,22 @@
 #include <vector>
 #include <mutex>
 
+#include "ros_node_base/RosNodeModuleBase.hpp"
+using namespace ros_node_utils;
+
 namespace sensor {
 
-class SensorHandlerBase
+class SensorHandlerBase : public RosNodeModuleBase
 {
  public:
-  SensorHandlerBase(std::mutex &mutex, int id)
-      : mutex_(mutex),
+  SensorHandlerBase(ros::NodeHandle* nodeHandle, std::mutex &mutex, int id)
+      : RosNodeModuleBase(nodeHandle),
+        mutex_(mutex),
         id_(id),
         dt_(0.0),
         isMeasurement_(false)
   {
-    ns_ = ros::this_node::getNamespace();
-    ns_.erase(0, 1);
+
   }
   ;
 
@@ -28,28 +31,6 @@ class SensorHandlerBase
   }
   ;
 
-  virtual void create()
-  {
-  }
-  ;
-
-  virtual void readParameters()
-  {
-  }
-  ;
-  virtual void initilize(ros::NodeHandle* nodeHandle)
-  {
-    nodeHandle_ = nodeHandle;
-  }
-
-  virtual void initilizePublishers()
-  {
-  }
-  ;
-  virtual void initilizeSubscribers()
-  {
-  }
-  ;
 
   void reset()
   {
@@ -85,6 +66,7 @@ class SensorHandlerBase
     return id_;
   }
   ;
+
   Eigen::MatrixXd getH()
   {
     return H_;
@@ -108,16 +90,14 @@ class SensorHandlerBase
   ;
 
  protected:
-  ros::NodeHandle* nodeHandle_;
-  std::string ns_;
+
   std::mutex &mutex_;
+
   int id_;
+
   bool isMeasurement_;
   double dt_;
 
-  ros::Publisher publisher;
-
-  ros::Subscriber subscriber_;
   std::string subscriberName_;
 
   Eigen::VectorXd z_;

@@ -6,8 +6,8 @@ namespace estimator {
 class ExtendedKalmanFilterBase : public KalmanFilterBase
 {
  public:
-  ExtendedKalmanFilterBase():
-    KalmanFilterBase()
+  ExtendedKalmanFilterBase(std::string nodeName):
+    KalmanFilterBase(nodeName)
   {
   }
   ;
