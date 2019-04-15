@@ -19,7 +19,7 @@
 #include <std_srvs/SetBool.h>
 #include <std_msgs/Float64MultiArray.h>
 
-#include "ros_node_base/RosExecuterNodeBase.hpp"
+#include "ros_node_utils/RosExecuterNodeBase.hpp"
 
 using namespace ros_node_utils;
 namespace estimator {
