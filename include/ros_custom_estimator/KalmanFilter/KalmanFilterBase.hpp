@@ -8,16 +8,12 @@ namespace estimator {
 class KalmanFilterBase : public EstimatorBase
 {
  public:
-  KalmanFilterBase(std::string nodeName)
-      : EstimatorBase(nodeName),
-        statePublisherQueueSize_(0),
-        publishTime_(true),
+  KalmanFilterBase(ros::NodeHandle* nodeHandle)
+      : EstimatorBase(nodeHandle),
         m_(0),
         n_(0),
         initializerSubscriberQueueSize_(1)
   {
-    time_start_ = clock();
-    time_start_ros_ = ros::Time::now().toSec();
   }
   ;
 
@@ -37,9 +33,6 @@ class KalmanFilterBase : public EstimatorBase
       s->setSubscriberName(name);
     }
     // SUBSCRIBERS
-    paramRead(this->nodeHandle_, this->namespace_ + "/estimator/subscribers/inputSubscriber/topic",
-              inputSubscriberName_);
-
     paramRead(this->nodeHandle_,
               this->namespace_ + "/estimator/subscribers/initializerSubscriber/topic",
               initializerSubscriberName_);
@@ -47,11 +40,7 @@ class KalmanFilterBase : public EstimatorBase
     paramRead(this->nodeHandle_,
               this->namespace_ + "/estimator/subscribers/initializerSubscriber/queue_size",
               initializerSubscriberName_);
-    // PUBLISHERS
-    paramRead(this->nodeHandle_, this->namespace_ + "/estimator/publishers/estimator/topic",
-              statePublisherName_);
-    paramRead(this->nodeHandle_, this->namespace_ + "/estimator/publishers/estimator/queue_size",
-              statePublisherQueueSize_);
+
 
     // PARAMETERS
     // X_O
@@ -83,8 +72,6 @@ class KalmanFilterBase : public EstimatorBase
       s->create();
     }
     state_ = std_msgs::Float64MultiArray();
-    publisherTimer_ = nodeHandle_->createTimer(ros::Duration(0.02),
-                                               &KalmanFilterBase::publisherTimerCallback, this);
   }
   ;
 
@@ -106,8 +93,6 @@ class KalmanFilterBase : public EstimatorBase
     for (auto& s : sensors_) {
       s->initializeSubscribers();
     }
-    inputSubcriber_ = nodeHandle_->subscribe(this->namespace_ + "/" + inputSubscriberName_, 10,
-                                             &KalmanFilterBase::inputSubscriberCallback, this);
 
     initializerSubcriber_ = nodeHandle_->subscribe(this->namespace_ + "/" + initializerSubscriberName_,
                                                   initializerSubscriberQueueSize_,
@@ -124,8 +109,6 @@ class KalmanFilterBase : public EstimatorBase
     for (auto& s : sensors_) {
       s->initializePublishers();
     }
-    statePublisher_ = nodeHandle_->advertise<std_msgs::Float64MultiArray>(
-        this->namespace_ + "/" + statePublisherName_, statePublisherQueueSize_);
   }
   ;
 
@@ -144,15 +127,6 @@ class KalmanFilterBase : public EstimatorBase
     for (auto& s : sensors_) {
       s->reset();
     }
-    time_stop_ = clock();
-    time_stop_ros_ = ros::Time::now().toSec();
-    //std::cout << "dt : " <<dt_<<" sec" << std::endl;
-    //std::cout << "Time: " << (time_stop_-time_start_)/double(CLOCKS_PER_SEC) << " sec "<< std::endl;
-    //std::cout << "Rime: " << time_stop_ros_-time_start_ros_<<" sec" <<std::endl;
-    //std::cout << "_____________" ;
-
-    time_start_ = clock();
-    time_start_ros_ = ros::Time::now().toSec();
   }
   ;
 
@@ -189,11 +163,7 @@ class KalmanFilterBase : public EstimatorBase
 
   virtual void publish()
   {
-    state_.data.clear();
-    for (int i = 0; i < x_m_.size(); i++) {
-      state_.data.push_back(x_m_(i));
-    }
-    statePublisher_.publish(state_);
+
   }
   ;
 
@@ -225,18 +195,13 @@ class KalmanFilterBase : public EstimatorBase
   ;
 
  protected:
+
   int n_;
   int m_;
 
   std::vector<sensor::SensorHandlerBase*> sensors_;
   std_msgs::Float64MultiArray state_;
 
-  ros::Publisher statePublisher_;
-  std::string statePublisherName_;
-  int statePublisherQueueSize_;
-
-  ros::Subscriber inputSubcriber_;
-  std::string inputSubscriberName_;
 
   ros::Subscriber initializerSubcriber_;
   std::string initializerSubscriberName_;
@@ -253,12 +218,7 @@ class KalmanFilterBase : public EstimatorBase
   Eigen::VectorXd u_;
   Eigen::VectorXd z_;
 
-  ros::Timer publisherTimer_;
-  bool publishTime_;
 
-  double time_start_;
-  double time_stop_;
-  double time_start_ros_;
-  double time_stop_ros_;
+
 };
 }

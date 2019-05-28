@@ -64,8 +64,6 @@ class EstimatorBase : public RosNodeModuleBase
   virtual void initialize() override
   {
     connectEstimator();
-
-    ERROR("[EstimatorBase] : is initialize. ");
   }
   ;
 
