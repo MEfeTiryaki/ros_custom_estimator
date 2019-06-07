@@ -15,90 +15,82 @@ namespace sensor {
 class SensorHandlerBase : public RosNodeModuleBase
 {
  public:
-  SensorHandlerBase(ros::NodeHandle* nodeHandle, std::mutex &mutex, int id)
+  SensorHandlerBase(ros::NodeHandle* nodeHandle)
       : RosNodeModuleBase(nodeHandle),
-        mutex_(mutex),
-        id_(id),
         dt_(0.0),
-        isMeasurement_(false)
+        isMeasurementUpdated_(false),
+        hardwareAdapterFrame_()
   {
 
   }
-  ;
 
   virtual ~SensorHandlerBase()
   {
   }
-  ;
 
+  virtual void create(hardware_adapter::HardwareAdapterFrameBase* hardwareAdapterFrame){
+   hardwareAdapterFrame_ = hardwareAdapterFrame ;
+  }
+
+  virtual void initialize()override {
+
+  }
+
+
+  /*! SensorHandler get data here
+   *
+   */
+  virtual void advance(){
+
+    isMeasurementUpdated_ = false;
+  }
 
   void reset()
   {
-    isMeasurement_ = false;
+    isMeasurementUpdated_ = false;
   }
-  ;
 
   bool isUpdated()
   {
-    return isMeasurement_;
+    return isMeasurementUpdated_;
   }
-  ;
 
-  virtual Eigen::VectorXd getData(Eigen::VectorXd x, Eigen::VectorXd u)
+  virtual Eigen::VectorXd getTransition(Eigen::VectorXd x, Eigen::VectorXd u)
   {
     return Eigen::VectorXd();
   }
-  ;
 
-  virtual Eigen::VectorXd geth(Eigen::VectorXd x)
+  virtual Eigen::VectorXd getObservation(Eigen::VectorXd x)
   {
     return Eigen::VectorXd();
   }
-  ;
-
-  virtual double probabilityDensity(Eigen::VectorXd w){
-    return 0.0;
-  };
 
 
-  int getId()
-  {
-    return id_;
-  }
-  ;
-
-  Eigen::MatrixXd getH()
+  Eigen::MatrixXd getObservationJacobian()
   {
     return H_;
   }
-  ;
-  Eigen::MatrixXd getR()
+
+  Eigen::MatrixXd getObservationNoiseCovariance()
   {
     return R_;
   }
-  ;
+
   void setDeltaT(double dt)
   {
     dt_ = dt;
   }
-  ;
 
-  void setSubscriberName(std::string name)
-  {
-    subscriberName_ = name;
-  }
-  ;
 
  protected:
 
-  std::mutex &mutex_;
-
-  int id_;
-
-  bool isMeasurement_;
+  bool isMeasurementUpdated_;
   double dt_;
 
-  std::string subscriberName_;
+  hardware_adapter::HardwareAdapterFrameBase* hardwareAdapterFrame_;
+
+  Eigen::VectorXd sensorData_;
+  double lastSensorDataTimeStamp_;
 
   Eigen::VectorXd z_;
   Eigen::MatrixXd H_;

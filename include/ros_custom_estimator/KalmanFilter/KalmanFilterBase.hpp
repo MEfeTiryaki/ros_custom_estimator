@@ -15,7 +15,7 @@ class KalmanFilterBase : public EstimatorBase
         initializerSubscriberQueueSize_(1)
   {
   }
-  ;
+
 
   //~KalmanFilterBase();
 
@@ -54,7 +54,7 @@ class KalmanFilterBase : public EstimatorBase
 
     EstimatorBase::readParameters();
   }
-  ;
+
 
   virtual void create() override
   {
@@ -73,7 +73,7 @@ class KalmanFilterBase : public EstimatorBase
     }
     state_ = std_msgs::Float64MultiArray();
   }
-  ;
+
 
   virtual void initialize() override
   {
@@ -86,7 +86,7 @@ class KalmanFilterBase : public EstimatorBase
     }
     EstimatorBase::initialize();
   }
-  ;
+
 
   virtual void initializeSubscribers() override
   {
@@ -102,7 +102,7 @@ class KalmanFilterBase : public EstimatorBase
     EstimatorBase::initializeSubscribers();
 
   }
-  ;
+
 
   virtual void initializePublishers() override
   {
@@ -110,11 +110,10 @@ class KalmanFilterBase : public EstimatorBase
       s->initializePublishers();
     }
   }
-  ;
+
 
   virtual void advance(double dt) override
   {
-    std::lock_guard<std::mutex> lock(mutex_);
     // Sets the self.z_
     getMeasurements();
     // Prediction Step
@@ -128,22 +127,22 @@ class KalmanFilterBase : public EstimatorBase
       s->reset();
     }
   }
-  ;
+
 
   virtual void addSensors()
   {
   }
-  ;
+
 
   virtual void pStep()
   {
   }
-  ;
+
 
   virtual void mStep()
   {
   }
-  ;
+
 
   virtual void getMeasurements()
   {
@@ -159,43 +158,25 @@ class KalmanFilterBase : public EstimatorBase
       }
     }
   }
-  ;
+
 
   virtual void publish()
   {
 
   }
-  ;
 
-  virtual void inputSubscriberCallback(std_msgs::Float64MultiArray msg)
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    for (int i = 0; i < msg.data.size(); i++) {
-      u_[i] = msg.data[i];
-    }
-  }
-  ;
 
   virtual void initializerSubscriberCallback(std_msgs::Float64MultiArray msg)
   {
-    std::lock_guard<std::mutex> lock(mutex_);
     //std::cerr << this->ns_ << " init subscriber!!" << std::endl;
     for (int i = 0; i < msg.data.size(); i++) {
       x_m_[i] = msg.data[i];
     }
     //std::cerr<< x_m_.transpose() << std::endl;
   }
-  ;
 
-  void publisherTimerCallback(const ros::TimerEvent& event)
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    publishTime_ = true;
-  }
-  ;
 
  protected:
-
   int n_;
   int m_;
 
