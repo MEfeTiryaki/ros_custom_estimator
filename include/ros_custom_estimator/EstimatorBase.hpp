@@ -32,8 +32,10 @@ class EstimatorBase : public RosNodeModuleBase
         estimatorRate_(100),
         isSimulation_(true),
         run_(false),
+        terminated_(false),
         dt_(0.0),
-        estimatorMutex_(),
+        estimatorMutex_(new std::mutex()),
+        shutdownMutex_(new std::mutex()),
         hardwareAdapterFrame_(),
         estimatorThread_(),
         robot_()
@@ -47,32 +49,43 @@ class EstimatorBase : public RosNodeModuleBase
   virtual void create(hardware_adapter::HardwareAdapterFrameBase* hardwareAdapterFrame,
                       robot::RobotContainerBase* robot)
   {
+    RosNodeModuleBase::create();
+    estimatorRate_ = 100 ;
+    isSimulation_ = true ;
+    run_ = false;
+    dt_ = 0.0;
     hardwareAdapterFrame_ = hardwareAdapterFrame;
     robot_ = robot;
+    CONFIRM("create : [Estimator_Base]");
   }
 
   virtual void readParameters()
   {
+    RosNodeModuleBase::readParameters();
     paramRead(this->nodeHandle_, "/simulation", isSimulation_);
     paramRead(this->nodeHandle_, this->namespace_ + "/estimator/rate", estimatorRate_);
     dt_ = 1.0 / estimatorRate_;
     rate_ = new ros::Rate(estimatorRate_);
     paramRead(this->nodeHandle_, this->namespace_ + "/estimator/services/stop/topic",
               stopServiceName_);
+    CONFIRM("readParameters : [Estimator_Base]");
   }
 
   virtual void initialize() override
   {
-    connectEstimator();
+    RosNodeModuleBase::initialize();
+    connect();
+    terminated_ = false;
+    CONFIRM("initialize : [Estimator_Base]");
   }
-  ;
 
-  virtual void initializeServices() override
-  {
-    stopServices_ = nodeHandle_->advertiseService(
-        this->namespace_ + "/estimator/" + stopServiceName_,
-        &EstimatorBase::estimatorStopServiceCallback, this);
+  virtual void shutdown() override{
+    RosNodeModuleBase::shutdown();
+    disconnect();
+    terminated_ = true;
+    ERROR("shutdown : [Estimator_Base]");
   }
+
 
   virtual void advance(double dt)
   {
@@ -83,18 +96,32 @@ class EstimatorBase : public RosNodeModuleBase
   virtual void execute()
   {
     while (ros::ok()) {
-      if (run_) {
-        advance(dt_);
+      std::lock_guard<std::mutex> lock(*shutdownMutex_);
+      if(!terminated_){
+        if (run_) {
+
+            advance(dt_);
+        }
+        ros::spinOnce();
+        rate_->sleep();
+
+      }else{
+        break;
       }
-      ros::spinOnce();
-      rate_->sleep();
       //WARNING("[Estimator] : " + std::to_string(ros::Time::now().toNSec()/1000000.0));
     }
   }
 
-  virtual void connectEstimator()
+  virtual void connect()
   {
     estimatorThread_ = new boost::thread(boost::bind(&EstimatorBase::execute, this));
+    WARNING("connect : [Estimator_Base]");
+  }
+
+  virtual void disconnect()
+  {
+    estimatorThread_->detach();
+    WARNING("disconnect : [Estimator_Base]");
   }
 
   std::mutex* getEstimatorMutex()
@@ -122,6 +149,9 @@ class EstimatorBase : public RosNodeModuleBase
   std::mutex* estimatorMutex_;
 
   boost::thread* estimatorThread_;
+
+  std::mutex* shutdownMutex_;
+  bool terminated_;
 
   double estimatorRate_;
   double dt_;

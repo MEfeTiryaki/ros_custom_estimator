@@ -7,6 +7,7 @@
 #include <vector>
 #include <mutex>
 
+#include "ros_custom_hardware_adapter/Sensor/SensorBase.hpp"
 #include "ros_node_utils/RosNodeModuleBase.hpp"
 using namespace ros_node_utils;
 
@@ -19,7 +20,8 @@ class SensorHandlerBase : public RosNodeModuleBase
       : RosNodeModuleBase(nodeHandle),
         dt_(0.0),
         isMeasurementUpdated_(false),
-        hardwareAdapterFrame_()
+        sensor_(),
+        lastSensorDataTimeStamp_(0.0)
   {
 
   }
@@ -28,11 +30,14 @@ class SensorHandlerBase : public RosNodeModuleBase
   {
   }
 
-  virtual void create(hardware_adapter::HardwareAdapterFrameBase* hardwareAdapterFrame){
-   hardwareAdapterFrame_ = hardwareAdapterFrame ;
+  virtual void create(SensorBase* sensor){
+   dt_= 0.0;
+   isMeasurementUpdated_ = false;
+   lastSensorDataTimeStamp_ = 0.0;
+   sensor_ = sensor ;
   }
 
-  virtual void initialize()override {
+  virtual void initialize() override {
 
   }
 
@@ -41,7 +46,6 @@ class SensorHandlerBase : public RosNodeModuleBase
    *
    */
   virtual void advance(){
-
     isMeasurementUpdated_ = false;
   }
 
@@ -55,7 +59,7 @@ class SensorHandlerBase : public RosNodeModuleBase
     return isMeasurementUpdated_;
   }
 
-  virtual Eigen::VectorXd getTransition(Eigen::VectorXd x, Eigen::VectorXd u)
+  virtual Eigen::VectorXd getMeasurement(Eigen::VectorXd x, Eigen::VectorXd u)
   {
     return Eigen::VectorXd();
   }
@@ -66,12 +70,12 @@ class SensorHandlerBase : public RosNodeModuleBase
   }
 
 
-  Eigen::MatrixXd getObservationJacobian()
+  virtual Eigen::MatrixXd getObservationJacobian()
   {
     return H_;
   }
 
-  Eigen::MatrixXd getObservationNoiseCovariance()
+  virtual Eigen::MatrixXd getObservationNoiseCovariance()
   {
     return R_;
   }
@@ -87,7 +91,8 @@ class SensorHandlerBase : public RosNodeModuleBase
   bool isMeasurementUpdated_;
   double dt_;
 
-  hardware_adapter::HardwareAdapterFrameBase* hardwareAdapterFrame_;
+
+  SensorBase* sensor_;
 
   Eigen::VectorXd sensorData_;
   double lastSensorDataTimeStamp_;

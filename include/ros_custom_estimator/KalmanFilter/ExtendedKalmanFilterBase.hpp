@@ -44,18 +44,19 @@ class ExtendedKalmanFilterBase : public KalmanFilterBase
       P_m_ =  P_p_;
     }
   }
-  ;
+
 
   virtual Eigen::VectorXd statePrediction(Eigen::VectorXd x, Eigen::VectorXd u)
   {
     return Eigen::VectorXd::Zero(n_);
   }
-  ;
+
+
   virtual void calculateF()
   {
     F_ = Eigen::MatrixXd::Identity(n_, n_);
   }
-  ;
+
   virtual void calculateH()
   {
     R_ = Eigen::MatrixXd();
@@ -87,7 +88,8 @@ class ExtendedKalmanFilterBase : public KalmanFilterBase
     }
 
   }
-  ;
+
+
   virtual void calculateY()
   {
 
