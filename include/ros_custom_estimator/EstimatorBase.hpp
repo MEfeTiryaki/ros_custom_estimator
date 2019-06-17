@@ -56,7 +56,7 @@ class EstimatorBase : public RosNodeModuleBase
     dt_ = 0.0;
     hardwareAdapterFrame_ = hardwareAdapterFrame;
     robot_ = robot;
-    CONFIRM("create : [Estimator_Base]");
+   //CONFIRM("create : [Estimator_Base]");
   }
 
   virtual void readParameters()
@@ -68,7 +68,7 @@ class EstimatorBase : public RosNodeModuleBase
     rate_ = new ros::Rate(estimatorRate_);
     paramRead(this->nodeHandle_, this->namespace_ + "/estimator/services/stop/topic",
               stopServiceName_);
-    CONFIRM("readParameters : [Estimator_Base]");
+   //CONFIRM("readParameters : [Estimator_Base]");
   }
 
   virtual void initialize() override
@@ -76,14 +76,14 @@ class EstimatorBase : public RosNodeModuleBase
     RosNodeModuleBase::initialize();
     connect();
     terminated_ = false;
-    CONFIRM("initialize : [Estimator_Base]");
+   //CONFIRM("initialize : [Estimator_Base]");
   }
 
   virtual void shutdown() override{
     RosNodeModuleBase::shutdown();
     disconnect();
     terminated_ = true;
-    ERROR("shutdown : [Estimator_Base]");
+   //ERROR("shutdown : [Estimator_Base]");
   }
 
 
@@ -115,13 +115,13 @@ class EstimatorBase : public RosNodeModuleBase
   virtual void connect()
   {
     estimatorThread_ = new boost::thread(boost::bind(&EstimatorBase::execute, this));
-    WARNING("connect : [Estimator_Base]");
+   //WARNING("connect : [Estimator_Base]");
   }
 
   virtual void disconnect()
   {
     estimatorThread_->detach();
-    WARNING("disconnect : [Estimator_Base]");
+   //WARNING("disconnect : [Estimator_Base]");
   }
 
   std::mutex* getEstimatorMutex()
