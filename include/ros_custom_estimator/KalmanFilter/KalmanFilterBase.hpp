@@ -124,7 +124,6 @@ class KalmanFilterBase : public EstimatorBase
   }
 
   virtual void updateInput()
-
   {
     std::lock_guard<std::mutex> lock(
         *this->hardwareAdapterFrame_->getActuator()->getActuatorMutex());
@@ -148,14 +147,14 @@ class KalmanFilterBase : public EstimatorBase
 
   virtual void pStep()
   {
-    std::cout << "________________" << std::endl;
-    std::cout << "x_m : " << x_m_.transpose() << std::endl;
-    std::cout << "u   : " << u_.transpose() << std::endl;
+    //std::cout << "________________" << std::endl;
+    //std::cout << "x_m : " << x_m_.transpose() << std::endl;
+    //std::cout << "u   : " << u_.transpose() << std::endl;
     calculateF();
     x_p_ = statePrediction(x_m_, u_);
     P_p_ = F_ * P_m_ * F_.transpose() + Q_;
-    std::cout << "x_p : " << x_p_.transpose() << std::endl;
-    std::cout << "P_p : " << P_p_ << std::endl;
+    //std::cout << "x_p : " << x_p_.transpose() << std::endl;
+    //std::cout << "P_p : " << P_p_ << std::endl;
   }
 
   virtual void mStep()
@@ -177,8 +176,8 @@ class KalmanFilterBase : public EstimatorBase
       P_m_ = P_p_;
     }
 
-    std::cout << "x_m : " << x_m_.transpose() << std::endl;
-    std::cout << "P_m : " << P_m_ << std::endl;
+    //std::cout << "x_m : " << x_m_.transpose() << std::endl;
+    //std::cout << "P_m : " << P_m_ << std::endl;
   }
 
   virtual Eigen::VectorXd statePrediction(Eigen::VectorXd x, Eigen::VectorXd u)

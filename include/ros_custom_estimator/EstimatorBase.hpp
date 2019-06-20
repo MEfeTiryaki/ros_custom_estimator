@@ -102,7 +102,7 @@ class EstimatorBase : public RosNodeModuleBase
 
             advance(dt_);
         }
-        ros::spinOnce();
+        //ros::spinOnce();
         rate_->sleep();
 
       }else{
