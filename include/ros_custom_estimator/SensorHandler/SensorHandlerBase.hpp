@@ -16,11 +16,11 @@ namespace sensor {
 class SensorHandlerBase : public RosNodeModuleBase
 {
  public:
-  SensorHandlerBase(ros::NodeHandle* nodeHandle)
+  SensorHandlerBase(ros::NodeHandle* nodeHandle,SensorBase& sensor)
       : RosNodeModuleBase(nodeHandle),
         dt_(0.0),
         isMeasurementUpdated_(false),
-        sensor_(),
+        sensor_(sensor),
         lastSensorDataTimeStamp_(0.0)
   {
 
@@ -30,11 +30,10 @@ class SensorHandlerBase : public RosNodeModuleBase
   {
   }
 
-  virtual void create(SensorBase* sensor){
+  virtual void create(){
    dt_= 0.0;
    isMeasurementUpdated_ = false;
    lastSensorDataTimeStamp_ = 0.0;
-   sensor_ = sensor ;
   }
 
   virtual void initialize() override {
@@ -92,7 +91,7 @@ class SensorHandlerBase : public RosNodeModuleBase
   double dt_;
 
 
-  SensorBase* sensor_;
+  SensorBase& sensor_;
 
   Eigen::VectorXd sensorData_;
   double lastSensorDataTimeStamp_;
