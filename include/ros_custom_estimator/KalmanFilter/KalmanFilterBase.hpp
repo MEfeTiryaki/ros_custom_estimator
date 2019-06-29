@@ -8,8 +8,10 @@ namespace estimator {
 class KalmanFilterBase : public EstimatorBase
 {
  public:
-  KalmanFilterBase(ros::NodeHandle* nodeHandle)
-      : EstimatorBase(nodeHandle),
+  KalmanFilterBase(ros::NodeHandle* nodeHandle,
+                   hardware_adapter::HardwareAdapterFrameBase& hardwareAdapterFrame,
+                   robot::RobotContainerBase& robot)
+      : EstimatorBase(nodeHandle, hardwareAdapterFrame, robot),
         m_(0),
         n_(0),
         initializerSubscriberQueueSize_(1)
@@ -18,12 +20,9 @@ class KalmanFilterBase : public EstimatorBase
 
   //~KalmanFilterBase();
 
-
-
-  virtual void create(hardware_adapter::HardwareAdapterFrameBase* hardwareAdapterFrame,
-                      robot::RobotContainerBase* robot) override
+  virtual void create() override
   {
-    EstimatorBase::create(hardwareAdapterFrame, robot);
+    EstimatorBase::create();
 
     x_0_ = Eigen::VectorXd::Zero(n_);
     x_m_ = Eigen::VectorXd::Zero(n_);
@@ -33,7 +32,7 @@ class KalmanFilterBase : public EstimatorBase
     u_ = Eigen::VectorXd::Zero(m_);
     z_ = Eigen::VectorXd::Zero(n_);
 
-    sensors_ = std::vector<sensor::SensorHandlerBase*>();
+    sensors_ = std::vector<std::unique_ptr<sensor::SensorHandlerBase>>();
     addSensors();
     state_ = std_msgs::Float64MultiArray();
   }
@@ -41,7 +40,7 @@ class KalmanFilterBase : public EstimatorBase
   virtual void readParameters() override
   {
 
-    for (auto s : sensors_) {
+    for (auto& s : sensors_) {
       s->readParameters();
     }
     // SUBSCRIBERS
@@ -99,7 +98,6 @@ class KalmanFilterBase : public EstimatorBase
     EstimatorBase::initialize();
   }
 
-
   virtual void advance(double dt) override
   {
     updateInput();
@@ -126,8 +124,8 @@ class KalmanFilterBase : public EstimatorBase
   virtual void updateInput()
   {
     std::lock_guard<std::mutex> lock(
-        *this->hardwareAdapterFrame_->getActuator()->getActuatorMutex());
-    u_ = this->hardwareAdapterFrame_->getActuator()->getCommands();
+        *this->hardwareAdapterFrame_.getActuator().getActuatorMutex());
+    u_ = this->hardwareAdapterFrame_.getActuator().getCommands();
   }
 
   virtual void updateMeasurements()
@@ -211,8 +209,7 @@ class KalmanFilterBase : public EstimatorBase
           R_ = R_sensor;
         } else {
           H_.conservativeResize(H_rowNum + R_sensor.rows(), H_.cols());
-          H_.block(H_rowNum, 0, H_sensor.rows(), H_sensor.cols()) =
-              sensor->getObservationJacobian();
+          H_.block(H_rowNum, 0, H_sensor.rows(), H_sensor.cols()) = sensor->getObservationJacobian();
           R_.conservativeResize(R_rowNum + R_sensor.rows(), R_colNum + R_sensor.cols());
           R_.block(R_rowNum, R_colNum, R_sensor.rows(), R_sensor.cols()) = sensor
               ->getObservationNoiseCovariance();
@@ -261,7 +258,8 @@ class KalmanFilterBase : public EstimatorBase
     //std::cerr<< x_m_.transpose() << std::endl;
   }
 
-  virtual void publish(){
+  virtual void publish()
+  {
 
   }
 
@@ -269,7 +267,7 @@ class KalmanFilterBase : public EstimatorBase
   int n_;
   int m_;
 
-  std::vector<sensor::SensorHandlerBase*> sensors_;
+  std::vector<std::unique_ptr<sensor::SensorHandlerBase>> sensors_;
   std_msgs::Float64MultiArray state_;
 
   ros::Subscriber initializerSubcriber_;
