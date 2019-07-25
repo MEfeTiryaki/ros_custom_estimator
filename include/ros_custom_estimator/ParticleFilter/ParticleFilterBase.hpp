@@ -52,21 +52,6 @@ class ParticleFilterBase : public EstimatorBase
     for (auto& s : sensors_) {
       s->readParameters();
     }
-    // SUBSCRIBERS
-    if (nodeHandle_->hasParam(this->namespace_ + "/estimator/subscribers/inputSubscriber/topic")) {
-      nodeHandle_->getParam(this->namespace_ + "/estimator/subscribers/inputSubscriber/topic",
-                            inputSubscriberName_);
-    }
-
-    // PUBLISHERS
-    if (nodeHandle_->hasParam(this->namespace_ + "/estimator/publishers/estimator/topic")) {
-      nodeHandle_->getParam(this->namespace_ + "/estimator/publishers/estimator/topic", statePublisherName_);
-    }
-    if (nodeHandle_->hasParam(this->namespace_ + "/estimator/publishers/estimator/queue_size")) {
-      nodeHandle_->getParam(this->namespace_ + "/estimator/publishers/estimator/queue_size",
-                            statePublisherQueueSize_);
-    }
-    // PARAMETERS
     // Particle Number_
     if (nodeHandle_->hasParam(this->namespace_ + "/estimator/PF/particle_number")) {
       nodeHandle_->getParam(this->namespace_ + "/estimator/PF/particle_number", particleNumber_);
@@ -300,7 +285,11 @@ class ParticleFilterBase : public EstimatorBase
 
   virtual void updateState()
   {
-
+    x_ = Eigen::VectorXd::Zero(n_);
+    for(auto p : particles_){
+      x_ += p.xm;
+    }
+    x_ /= particles_.size();
   }
 
   virtual void publish()
@@ -315,13 +304,8 @@ class ParticleFilterBase : public EstimatorBase
 
   std::vector<std::unique_ptr<sensor::ParticleFilterSensorHandlerBase>> sensors_;
 
-  ros::Publisher statePublisher_;
-  std::string statePublisherName_;
   int statePublisherQueueSize_;
   ros::Publisher vis_pub;
-
-  ros::Subscriber inputSubcriber_;
-  std::string inputSubscriberName_;
 
   int particleNumber_;
   std::vector<Particle> particles_;

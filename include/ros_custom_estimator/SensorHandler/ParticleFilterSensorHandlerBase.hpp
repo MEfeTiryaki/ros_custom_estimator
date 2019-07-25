@@ -24,8 +24,8 @@ class  ParticleFilterSensorHandlerBase : public SensorHandlerBase
   }
 
   virtual double probabilityDensity(Eigen::VectorXd x){
-
+    return 0.0;
   }
-  
+
 };
 }  // namespace sensor
