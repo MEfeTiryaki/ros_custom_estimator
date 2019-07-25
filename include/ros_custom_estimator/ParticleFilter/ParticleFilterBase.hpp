@@ -8,9 +8,8 @@
 #pragma once
 
 #include "ros_custom_estimator/EstimatorBase.hpp"
-#include "ros_custom_estimator/SensorHandler/SensorHandlerBase.hpp"
-#include "ros_custom_controller_base/State.h"
-#include "ros_custom_controller_base/Input.h"
+#include "ros_custom_estimator/SensorHandler/ParticleFilterSensorHandlerBase.hpp"
+
 #include <ctime>
 
 namespace estimator {
@@ -28,8 +27,10 @@ struct Particle
 class ParticleFilterBase : public EstimatorBase
 {
  public:
-  ParticleFilterBase():
-    EstimatorBase(),
+  ParticleFilterBase(ros::NodeHandle* nodeHandle,
+                   hardware_adapter::HardwareAdapterFrameBase& hardwareAdapterFrame,
+                   robot::RobotContainerBase& robot):
+    EstimatorBase(nodeHandle,hardwareAdapterFrame,robot),
     statePublisherQueueSize_(0),
     publishTime_(true),
     defaultProbabilityDensity_(0.0),
@@ -48,36 +49,27 @@ class ParticleFilterBase : public EstimatorBase
 
   virtual void readParameters() override
   {
-    for (auto s : sensors_) {
+    for (auto& s : sensors_) {
       s->readParameters();
-      if (nodeHandle_->hasParam(
-          ns_ + "/estimator/subscribers/sensorSubscriber_" + std::to_string(s->getId()) + "/topic")) {
-        std::string name;
-        nodeHandle_->getParam(
-            ns_ + "/estimator/subscribers/sensorSubscriber_" + std::to_string(s->getId()) + "/topic",
-            name);
-        std::cout << name << std::endl;
-        s->setSubscriberName(name);
-      }
     }
     // SUBSCRIBERS
-    if (nodeHandle_->hasParam(ns_ + "/estimator/subscribers/inputSubscriber/topic")) {
-      nodeHandle_->getParam(ns_ + "/estimator/subscribers/inputSubscriber/topic",
+    if (nodeHandle_->hasParam(this->namespace_ + "/estimator/subscribers/inputSubscriber/topic")) {
+      nodeHandle_->getParam(this->namespace_ + "/estimator/subscribers/inputSubscriber/topic",
                             inputSubscriberName_);
     }
 
     // PUBLISHERS
-    if (nodeHandle_->hasParam(ns_ + "/estimator/publishers/estimator/topic")) {
-      nodeHandle_->getParam(ns_ + "/estimator/publishers/estimator/topic", statePublisherName_);
+    if (nodeHandle_->hasParam(this->namespace_ + "/estimator/publishers/estimator/topic")) {
+      nodeHandle_->getParam(this->namespace_ + "/estimator/publishers/estimator/topic", statePublisherName_);
     }
-    if (nodeHandle_->hasParam(ns_ + "/estimator/publishers/estimator/queue_size")) {
-      nodeHandle_->getParam(ns_ + "/estimator/publishers/estimator/queue_size",
+    if (nodeHandle_->hasParam(this->namespace_ + "/estimator/publishers/estimator/queue_size")) {
+      nodeHandle_->getParam(this->namespace_ + "/estimator/publishers/estimator/queue_size",
                             statePublisherQueueSize_);
     }
     // PARAMETERS
     // Particle Number_
-    if (nodeHandle_->hasParam(ns_ + "/estimator/PF/particle_number")) {
-      nodeHandle_->getParam(ns_ + "/estimator/PF/particle_number", particleNumber_);
+    if (nodeHandle_->hasParam(this->namespace_ + "/estimator/PF/particle_number")) {
+      nodeHandle_->getParam(this->namespace_ + "/estimator/PF/particle_number", particleNumber_);
     }
 
     EstimatorBase::readParameters();
@@ -85,27 +77,25 @@ class ParticleFilterBase : public EstimatorBase
 
   virtual void create() override
   {
-    sensors_ = std::vector<sensor::SensorHandlerBase*>();
+    sensors_ = std::vector<std::unique_ptr<sensor::ParticleFilterSensorHandlerBase>>();
     addSensors();
     for (auto& s : sensors_) {
       s->create();
     }
-    state_ = ros_custom_controller_base::State();
-    publisherTimer_ = nodeHandle_->createTimer(ros::Duration(0.02),
-                                               &ParticleFilterBase::publisherTimerCallback, this);
+
 
     randomNumberGenerator_ = std::default_random_engine(randomDevice_());
     uniformDistribution_ = std::uniform_real_distribution<double>(0.0, 1.0);
 
   };
 
-  virtual void initilize() override
+  virtual void initialize() override
   {
 
     for (auto& s : sensors_) {
-       s->initilize(nodeHandle_);
+       s->initialize();
      }
-    EstimatorBase::initilize();
+    EstimatorBase::initialize();
     particles_ = std::vector<Particle>(particleNumber_);
     resamplingParticles_ = std::vector<Particle>(particleNumber_);
     double sum = 0.0;
@@ -134,29 +124,32 @@ class ParticleFilterBase : public EstimatorBase
 
   };
 
-  virtual void initilizeSubscribers() override
+  virtual void initializeSubscribers() override
   {
     for (auto& s : sensors_) {
-      s->initilizeSubscribers();
+      s->initializeSubscribers();
     }
-    inputSubcriber_ = nodeHandle_->subscribe(ns_ + "/" + inputSubscriberName_, 10,
-                                             &ParticleFilterBase::inputSubscriberCallback, this);
-    EstimatorBase::initilizeSubscribers();
+    EstimatorBase::initializeSubscribers();
 
-  };
+  }
 
-  virtual void initilizePublishers() override
+  virtual void initializePublishers() override
   {
     for (auto& s : sensors_) {
-      s->initilizePublishers();
+      s->initializePublishers();
     }
-    statePublisher_ = nodeHandle_->advertise<ros_custom_controller_base::State>(
-        ns_ + "/" + statePublisherName_, statePublisherQueueSize_);
-  };
+
+  }
 
   virtual void advance(double dt) override
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    //std::lock_guard<std::mutex> lock(mutex_);
+
+    updateInput();
+    // Set Measurement and Input flags False
+    for (auto& s : sensors_) {
+      s->reset();
+    }
     //
     getMeasurements(dt_);
     // Prediction Step
@@ -165,20 +158,17 @@ class ParticleFilterBase : public EstimatorBase
     mStep();
     // Publish the state
     publish();
-    // Set Measurement and Input flags False
-    for (auto& s : sensors_) {
-      s->reset();
-    }
-    time_stop_ = clock();
-    std::cout << "Time: " << (time_stop_ - time_start_) / double(CLOCKS_PER_SEC) << " sec "
-              << std::endl;
-    time_start_ = clock();
+
+    //time_stop_ = clock();
+    //std::cout << "Time: " << (time_stop_ - time_start_) / double(CLOCKS_PER_SEC) << " sec "
+    //          << std::endl;
+    //time_start_ = clock();
   }
-;
+
 
   virtual void addSensors()
   {
-  };
+  }
 
   virtual void pStep()
   {
@@ -191,7 +181,7 @@ class ParticleFilterBase : public EstimatorBase
       //std::cerr<< "p.xp : "<<p.xp.transpose() << std::endl;
       //std::cerr<< "p.xm : "<<p.xm.transpose() << std::endl;
     }
-  };
+  }
 
   virtual void mStep()
   {
@@ -283,62 +273,47 @@ class ParticleFilterBase : public EstimatorBase
     particles_ = resamplingParticles_;
   };
 
+  virtual void updateInput()
+  {
+
+  }
+
   virtual void getMeasurements(double dt)
   {
-    for (auto& sensor : sensors_) {
-      if (sensor->isUpdated()) {
-        sensor->getData(x_, u_);
-      }
-    }
-  };
+
+  }
 
   virtual Eigen::VectorXd predict(Eigen::VectorXd x, Eigen::VectorXd u, Eigen::VectorXd v)
   {
     return Eigen::VectorXd();
   }
-  ;
+
   virtual Eigen::VectorXd initilizationDistribution(Eigen::VectorXd v)
   {
     return Eigen::VectorXd();
   }
-  ;
 
   virtual Eigen::VectorXd processNoise(Eigen::VectorXd v)
   {
     return Eigen::VectorXd();
   }
-  ;
 
+  virtual void updateState()
+  {
+
+  }
 
   virtual void publish()
   {
-    state_.header.stamp = ros::Time::now();
-    state_.state.clear();
-    for (int i = 0; i < n_; i++) {
-      state_.state.push_back(x_[i]);
-    }
-    statePublisher_.publish(state_);
-  };
 
-  virtual void inputSubscriberCallback(ros_custom_controller_base::Input msg)
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    for (int i = 0; i < msg.input.size(); i++) {
-      u_[i] = msg.input[i];
-    }
-  };
-  void publisherTimerCallback(const ros::TimerEvent& event)
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    publishTime_ = true;
-  };
+  }
+
 
  protected:
   int n_;
   int m_;
 
-  std::vector<sensor::SensorHandlerBase*> sensors_;
-  ros_custom_controller_base::State state_;
+  std::vector<std::unique_ptr<sensor::ParticleFilterSensorHandlerBase>> sensors_;
 
   ros::Publisher statePublisher_;
   std::string statePublisherName_;
