@@ -112,7 +112,9 @@ class KalmanFilterBase : public EstimatorBase
     // Measurement Step
     mStep();
     // Publish the state
-    updateState();
+    if(active_){
+      updateState();
+    }
     // Log publish
     publish();
     // Set Measurement and Input flags False

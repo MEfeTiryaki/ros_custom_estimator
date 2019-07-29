@@ -38,7 +38,8 @@ class EstimatorBase : public RosNodeModuleBase
         run_(false),
         dt_(0.0),
         estimatorMutex_(new std::mutex()),
-        estimatorThread_()
+        estimatorThread_(),
+        active_(true)
   {
   }
 
@@ -122,6 +123,10 @@ class EstimatorBase : public RosNodeModuleBase
     run_ = run;
   }
 
+  void setActive(bool active)
+  {
+    active_ = active;
+  }
  protected:
 
   bool estimatorStopServiceCallback(std_srvs::SetBool::Request& request,
@@ -148,6 +153,7 @@ class EstimatorBase : public RosNodeModuleBase
 
   // Flag for running
   bool run_;
+  bool active_;
 
   hardware_adapter::HardwareAdapterFrameBase& hardwareAdapterFrame_;
   robot::RobotContainerBase& robot_;

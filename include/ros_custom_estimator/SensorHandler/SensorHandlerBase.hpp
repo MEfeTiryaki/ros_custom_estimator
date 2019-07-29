@@ -84,6 +84,9 @@ class SensorHandlerBase : public RosNodeModuleBase
     dt_ = dt;
   }
 
+  virtual double getTimeStamp() {
+    return lastSensorDataTimeStamp_;
+  }
 
  protected:
 
