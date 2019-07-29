@@ -105,8 +105,10 @@ class KalmanFilterBase : public EstimatorBase
     for (auto& s : sensors_) {
       s->advance();
     }
+
     // Sets the self.z_
     updateMeasurements();
+
     // Prediction Step
     pStep();
     // Measurement Step
@@ -121,6 +123,7 @@ class KalmanFilterBase : public EstimatorBase
     for (auto& s : sensors_) {
       s->reset();
     }
+
   }
 
   virtual void updateInput()
@@ -141,6 +144,9 @@ class KalmanFilterBase : public EstimatorBase
         size_z = z_.size();
         z_.conservativeResize(size_z + z.size());
         z_.segment(size_z, z.size()) = z;
+
+        CONFIRM("Kalm : " + std::to_string(sensor->getTimeStamp()/1000000000)+" , "
+                          + std::to_string(ros::Time::now().toSec()));
       }
     }
   }
