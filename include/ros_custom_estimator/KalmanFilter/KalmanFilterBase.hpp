@@ -145,8 +145,8 @@ class KalmanFilterBase : public EstimatorBase
         z_.conservativeResize(size_z + z.size());
         z_.segment(size_z, z.size()) = z;
 
-        CONFIRM("Kalm : " + std::to_string(sensor->getTimeStamp()/1000000000)+" , "
-                          + std::to_string(ros::Time::now().toSec()));
+        //CONFIRM("Kalm : " + std::to_string(sensor->getTimeStamp()/1000000000)+" , "
+        //                  + std::to_string(ros::Time::now().toSec()));
       }
     }
   }
