@@ -100,11 +100,11 @@ class KalmanFilterBase : public EstimatorBase
 
   virtual void advance(double dt) override
   {
-    updateInput();
-
     for (auto& s : sensors_) {
       s->advance();
     }
+
+    updateInput();
 
     // Sets the self.z_
     updateMeasurements();
@@ -123,7 +123,7 @@ class KalmanFilterBase : public EstimatorBase
     for (auto& s : sensors_) {
       s->reset();
     }
-
+    
   }
 
   virtual void updateInput()
