@@ -45,22 +45,22 @@ class KalmanFilterBase : public EstimatorBase
     }
     // SUBSCRIBERS
     paramRead(this->nodeHandle_,
-              this->namespace_ + "/estimator/subscribers/initializerSubscriber/topic",
+              "/" + this->namespace_ + "/estimator/subscribers/initializerSubscriber/topic",
               initializerSubscriberName_);
 
     paramRead(this->nodeHandle_,
-              this->namespace_ + "/estimator/subscribers/initializerSubscriber/queue_size",
+              "/" + this->namespace_ + "/estimator/subscribers/initializerSubscriber/queue_size",
               initializerSubscriberQueueSize_);
 
     // PARAMETERS
     // X_O
-    paramRead(this->nodeHandle_, this->namespace_ + "/estimator/estimatorParameters/X", x_0_);
+    paramRead(this->nodeHandle_ , "/" + this->namespace_ + "/estimator/estimatorParameters/X", x_0_);
     x_m_ = x_0_;
     // P
-    paramRead(this->nodeHandle_, this->namespace_ + "/estimator/estimatorParameters/P", P_init_);
+    paramRead(this->nodeHandle_ , "/" + this->namespace_ + "/estimator/estimatorParameters/P", P_init_);
     P_m_ = P_init_;
     // Q
-    paramRead(this->nodeHandle_, this->namespace_ + "/estimator/estimatorParameters/Q", Q_);
+    paramRead(this->nodeHandle_ , "/" + this->namespace_ + "/estimator/estimatorParameters/Q", Q_);
 
     EstimatorBase::readParameters();
   }
@@ -72,7 +72,7 @@ class KalmanFilterBase : public EstimatorBase
     }
 
     initializerSubcriber_ = nodeHandle_->subscribe(
-        this->namespace_ + "/" + initializerSubscriberName_, initializerSubscriberQueueSize_,
+      "/" +   this->namespace_ + "/" + initializerSubscriberName_, initializerSubscriberQueueSize_,
         &KalmanFilterBase::initializerSubscriberCallback, this);
 
     EstimatorBase::initializeSubscribers();
@@ -123,7 +123,7 @@ class KalmanFilterBase : public EstimatorBase
     for (auto& s : sensors_) {
       s->reset();
     }
-    
+
   }
 
   virtual void updateInput()

@@ -60,8 +60,8 @@ class EstimatorBase : public RosNodeModuleBase
   {
     RosNodeModuleBase::readParameters();
     paramRead(this->nodeHandle_, "/simulation", isSimulation_);
-    paramRead(this->nodeHandle_, this->namespace_ + "/estimator/rate", estimatorRate_);
-    paramRead(this->nodeHandle_, this->namespace_ + "/estimator/services/stop/topic",
+    paramRead(this->nodeHandle_ , "/" + this->namespace_ + "/estimator/rate", estimatorRate_);
+    paramRead(this->nodeHandle_ , "/" + this->namespace_ + "/estimator/services/stop/topic",
               stopServiceName_);
   }
 
