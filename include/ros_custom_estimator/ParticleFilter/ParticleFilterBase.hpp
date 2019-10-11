@@ -28,7 +28,7 @@ class ParticleFilterBase : public EstimatorBase
 {
  public:
   ParticleFilterBase(ros::NodeHandle* nodeHandle,
-                   hardware_adapter::HardwareAdapterFrameBase& hardwareAdapterFrame,
+                   hardware_adapter::HardwareBase& hardwareAdapterFrame,
                    robot::RobotContainerBase& robot):
     EstimatorBase(nodeHandle,hardwareAdapterFrame,robot),
     statePublisherQueueSize_(0),

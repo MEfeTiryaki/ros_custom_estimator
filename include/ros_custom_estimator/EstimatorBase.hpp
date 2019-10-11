@@ -8,47 +8,37 @@
 
 #pragma once
 
-#include <ros/ros.h>
-#include <boost/thread.hpp>
 #include <boost/chrono.hpp>
+#include <boost/thread.hpp>
 #include <math.h>
 #include <memory>
 #include <mutex>
+#include <ros/ros.h>
 
-#include <std_srvs/SetBool.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <std_srvs/SetBool.h>
 
-#include "ros_node_utils/RosNodeModuleBase.hpp"
-#include "ros_custom_hardware_adapter/HardwareAdapterFrameBase.hpp"
 #include "robot_container/RobotContainerBase.hpp"
+#include "ros_custom_hardware_adapter/HardwareBase.hpp"
+#include "ros_node_utils/RosNodeModuleBase.hpp"
+
+#include "ros_custom_estimator/SensorHandler/SensorHandlerBase.hpp"
 
 using namespace ros_node_utils;
 namespace estimator {
-class EstimatorBase : public RosNodeModuleBase
-{
- public:
-  EstimatorBase(ros::NodeHandle* nodeHandle,
-                hardware_adapter::HardwareAdapterFrameBase& hardwareAdapterFrame,
-                robot::RobotContainerBase& robot)
-      : RosNodeModuleBase(nodeHandle),
-        hardwareAdapterFrame_(hardwareAdapterFrame),
-        robot_(robot),
-        estimatorRate_(100),
-        isSimulation_(true),
-        run_(false),
-        dt_(0.0),
-        estimatorMutex_(new std::mutex()),
-        estimatorThread_(),
-        active_(true)
-  {
-  }
+class EstimatorBase : public RosNodeModuleBase {
+public:
+  EstimatorBase(ros::NodeHandle *nodeHandle,
+                hardware_adapter::HardwareBase &hardwareAdapterFrame,
+                robot::RobotContainerBase &robot)
+      : RosNodeModuleBase(nodeHandle), hardware_(hardwareAdapterFrame),
+        robot_(robot), estimatorRate_(100), isSimulation_(true), run_(false),
+        dt_(0.0), estimatorMutex_(new std::mutex()), estimatorThread_(),
+        active_(true) {}
 
-  virtual ~EstimatorBase()
-  {
-  }
+  virtual ~EstimatorBase() {}
 
-  virtual void create()
-  {
+  virtual void create() {
     RosNodeModuleBase::create();
     estimatorRate_ = 100;
     isSimulation_ = true;
@@ -56,17 +46,17 @@ class EstimatorBase : public RosNodeModuleBase
     dt_ = 0.0;
   }
 
-  virtual void readParameters()
-  {
+  virtual void readParameters() {
     RosNodeModuleBase::readParameters();
     paramRead(this->nodeHandle_, "/simulation", isSimulation_);
-    paramRead(this->nodeHandle_ , "/" + this->namespace_ + "/estimator/rate", estimatorRate_);
-    paramRead(this->nodeHandle_ , "/" + this->namespace_ + "/estimator/services/stop/topic",
+    paramRead(this->nodeHandle_, "/" + this->namespace_ + "/estimator/rate",
+              estimatorRate_);
+    paramRead(this->nodeHandle_,
+              "/" + this->namespace_ + "/estimator/services/stop/topic",
               stopServiceName_);
   }
 
-  virtual void initialize() override
-  {
+  virtual void initialize() override {
     RosNodeModuleBase::initialize();
     dt_ = 1.0 / estimatorRate_;
     rate_ = new ros::Rate(estimatorRate_);
@@ -74,19 +64,15 @@ class EstimatorBase : public RosNodeModuleBase
     connect();
   }
 
-  virtual void shutdown() override
-  {
+  virtual void shutdown() override {
     std::lock_guard<std::mutex> lock(*shutdownMutex_);
     RosNodeModuleBase::shutdown();
     disconnect();
   }
 
-  virtual void advance(double dt)
-  {
-  }
+  virtual void advance(double dt) {}
 
-  virtual void execute()
-  {
+  virtual void execute() {
     while (ros::ok()) {
       {
         std::lock_guard<std::mutex> lock(*shutdownMutex_);
@@ -103,35 +89,27 @@ class EstimatorBase : public RosNodeModuleBase
     terminate();
   }
 
-  virtual void connect()
-  {
-    estimatorThread_ = new boost::thread(boost::bind(&EstimatorBase::execute, this));
+  virtual void connect() {
+    estimatorThread_ =
+        new boost::thread(boost::bind(&EstimatorBase::execute, this));
   }
 
-  virtual void disconnect()
-  {
-    estimatorThread_->detach();
+  virtual void disconnect() { estimatorThread_->detach(); }
+
+  virtual void addSensor(std::unique_ptr<sensor::SensorHandlerBase> sensor) {
+    sensors_.push_back(std::move(sensor));
+    sensors_.back()->create();
   }
 
-  std::mutex* getEstimatorMutex()
-  {
-    return estimatorMutex_;
-  }
+  std::mutex *getEstimatorMutex() { return estimatorMutex_; }
 
-  void setRun(bool run)
-  {
-    run_ = run;
-  }
+  void setRun(bool run) { run_ = run; }
 
-  void setActive(bool active)
-  {
-    active_ = active;
-  }
- protected:
+  void setActive(bool active) { active_ = active; }
 
-  bool estimatorStopServiceCallback(std_srvs::SetBool::Request& request,
-                                    std_srvs::SetBool::Response& response)
-  {
+protected:
+  bool estimatorStopServiceCallback(std_srvs::SetBool::Request &request,
+                                    std_srvs::SetBool::Response &response) {
     run_ = !request.data;
     response.success = true;
     return true;
@@ -139,12 +117,14 @@ class EstimatorBase : public RosNodeModuleBase
 
   std::string robotName_;
 
-  std::mutex* estimatorMutex_;
+  std::mutex *estimatorMutex_;
 
-  boost::thread* estimatorThread_;
+  boost::thread *estimatorThread_;
 
   double estimatorRate_;
   double dt_;
+
+  std::vector<std::unique_ptr<sensor::SensorHandlerBase>> sensors_;
 
   bool isSimulation_;
   std::string stopServiceName_;
@@ -155,7 +135,7 @@ class EstimatorBase : public RosNodeModuleBase
   bool run_;
   bool active_;
 
-  hardware_adapter::HardwareAdapterFrameBase& hardwareAdapterFrame_;
-  robot::RobotContainerBase& robot_;
+  hardware_adapter::HardwareBase &hardware_;
+  robot::RobotContainerBase &robot_;
 };
-}  // namespace estimator
+} // namespace estimator
