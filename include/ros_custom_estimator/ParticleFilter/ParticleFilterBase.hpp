@@ -28,9 +28,9 @@ class ParticleFilterBase : public EstimatorBase
 {
  public:
   ParticleFilterBase(ros::NodeHandle* nodeHandle,
-                   hardware_adapter::HardwareBase& hardwareAdapterFrame,
+                  SensorBase &sensor, ActuatorBase &actuator,
                    robot::RobotContainerBase& robot):
-    EstimatorBase(nodeHandle,hardwareAdapterFrame,robot),
+    EstimatorBase(nodeHandle,sensor, actuator,,robot),
     statePublisherQueueSize_(0),
     publishTime_(true),
     defaultProbabilityDensity_(0.0),

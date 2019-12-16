@@ -7,9 +7,9 @@ class ExtendedKalmanFilterBase : public KalmanFilterBase
 {
  public:
   ExtendedKalmanFilterBase(ros::NodeHandle* nodeHandle,
-      hardware_adapter::HardwareBase& hardwareAdapterFrame,
+      SensorBase &sensor, ActuatorBase &actuator,
       robot::RobotContainerBase& robot)
-  : KalmanFilterBase(nodeHandle, hardwareAdapterFrame, robot)
+  : KalmanFilterBase(nodeHandle, sensor, actuator,, robot)
   {
   }
 
@@ -17,6 +17,6 @@ class ExtendedKalmanFilterBase : public KalmanFilterBase
   ~ExtendedKalmanFilterBase()
   {
   }
-  
+
 };
 }

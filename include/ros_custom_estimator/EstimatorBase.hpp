@@ -29,9 +29,9 @@ namespace estimator {
 class EstimatorBase : public RosNodeModuleBase {
 public:
   EstimatorBase(ros::NodeHandle *nodeHandle,
-                hardware_adapter::HardwareBase &hardwareAdapterFrame,
+                SensorBase &sensor, ActuatorBase &actuator,
                 robot::RobotContainerBase &robot)
-      : RosNodeModuleBase(nodeHandle), hardware_(hardwareAdapterFrame),
+      : RosNodeModuleBase(nodeHandle), sensor_(sensor),actuator_(actuator),
         robot_(robot), estimatorRate_(100), isSimulation_(true), run_(false),
         dt_(0.0), estimatorMutex_(new std::mutex()), estimatorThread_(),
         active_(true) {}
@@ -135,7 +135,8 @@ protected:
   bool run_;
   bool active_;
 
-  hardware_adapter::HardwareBase &hardware_;
+  SensorBase &sensor_;
+  ActuatorBase &actuator_;
   robot::RobotContainerBase &robot_;
 };
 } // namespace estimator

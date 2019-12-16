@@ -9,9 +9,9 @@ namespace estimator {
 class KalmanFilterBase : public EstimatorBase {
 public:
   KalmanFilterBase(ros::NodeHandle *nodeHandle,
-                   hardware_adapter::HardwareBase &hardwareAdapterFrame,
+                    SensorBase &sensor, ActuatorBase &actuator,
                    robot::RobotContainerBase &robot)
-      : EstimatorBase(nodeHandle, hardwareAdapterFrame, robot), m_(0), n_(0),
+      : EstimatorBase(nodeHandle,   sensor, actuator,, robot), m_(0), n_(0),
         initializerSubscriberQueueSize_(1), isMeasurementUpdated_(false) {}
 
   //~KalmanFilterBase();
@@ -145,8 +145,8 @@ public:
 
   virtual void updateInput() {
     std::lock_guard<std::mutex> lock(
-        *this->hardware_.getActuator().getActuatorMutex());
-    u_ = this->hardware_.getActuator().getCommands();
+        *actuator_.getActuatorMutex());
+    u_ = actuator_.getCommands();
   }
 
   virtual void updateMeasurements() {
