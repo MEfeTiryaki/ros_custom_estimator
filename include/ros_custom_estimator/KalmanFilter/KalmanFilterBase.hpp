@@ -11,7 +11,7 @@ public:
   KalmanFilterBase(ros::NodeHandle *nodeHandle,
                     SensorBase &sensor, ActuatorBase &actuator,
                    robot::RobotContainerBase &robot)
-      : EstimatorBase(nodeHandle,   sensor, actuator,, robot), m_(0), n_(0),
+      : EstimatorBase(nodeHandle,   sensor, actuator, robot), m_(0), n_(0),
         initializerSubscriberQueueSize_(1), isMeasurementUpdated_(false) {}
 
   //~KalmanFilterBase();
@@ -146,7 +146,7 @@ public:
   virtual void updateInput() {
     std::lock_guard<std::mutex> lock(
         *actuator_.getActuatorMutex());
-    u_ = actuator_.getCommands();
+    u_ = actuator_.getCommand();
   }
 
   virtual void updateMeasurements() {
@@ -166,6 +166,7 @@ public:
         // CONFIRM("Kalm : " +
         // std::to_string(sensor->getTimeStamp()/1000000000)+" , "
         //                  + std::to_string(ros::Time::now().toSec()));
+        this->isMeasurementUpdated_ = true;
       }
     }
     checkMeasurement();
